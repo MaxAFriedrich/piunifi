@@ -75,24 +75,6 @@ task_fail() {
     echo -e "\r[\033[0;31m\xe2\x9c\x98\033[0m] ${1}"
 }
 
-# Function to pause script and check if the user wishes to continue.
-check_continue() {
-    local response
-    while true; do
-        read -r -p "Do you wish to continue (y/N)? " response
-        case "${response}" in
-        [yY][eE][sS] | [yY])
-            echo
-            break
-            ;;
-        *)
-            echo
-            exit
-            ;;
-        esac
-    done
-}
-
 # Function to check if superuser or running using sudo
 check_superuser() {
     if [[ $(id -u) -ne 0 ]] >/dev/null 2>&1; then
@@ -149,10 +131,25 @@ is_active() {
 setup_dependencies() {
     term_message db "Setup Dependencies"
     term_message c "Installing required dependencies..."
-    pkg_install ca-certificates apt-transport-https openjdk-8-jre-headless haveged
+    pkg_install ca-certificates apt-transport-https haveged unattended-upgrades apt-listchanges curl openjdk-17-jre-headless
+    task_start "Enabling auto updates"
+    echo unattended-upgrades unattended-upgrades/enable_auto_updates boolean true | debconf-set-selections
+    dpkg-reconfigure -f noninteractive unattended-upgrades
+    task_done
     task_start "Adding unifi debian source location and keys..."
     echo 'deb https://www.ui.com/downloads/unifi/debian stable ubiquiti' | sudo tee /etc/apt/sources.list.d/100-ubnt-unifi.list &>/dev/null
-    sudo wget -O /etc/apt/trusted.gpg.d/unifi-repo.gpg https://dl.ui.com/unifi/unifi-repo.gpg &>/dev/null
+    wget -O /etc/apt/trusted.gpg.d/unifi-repo.gpg https://dl.ui.com/unifi/unifi-repo.gpg &>/dev/null
+    task_done
+    task_start "Add tailscale debian source location and keys..."
+    curl -fsSL https://pkgs.tailscale.com/stable/debian/bullseye.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    curl -fsSL https://pkgs.tailscale.com/stable/debian/bullseye.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+    task_done
+    task_start "Installing mongodb"
+    wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.0.0_1.0.2g-1ubuntu4_arm64.deb -O /tmp/libssl1.0.deb
+    pkg_install /tmp/libssl1.0.deb
+    wget https://repo.mongodb.org/apt/ubuntu/dists/xenial/mongodb-org/3.6/multiverse/binary-arm64/mongodb-org-server_3.6.22_arm64.deb -O /tmp/mongodb.deb
+    pkg_install /tmp/mongodb.deb
+    systemctl enable mongod --now
     task_done
     term_message c "Updating packages to include newly added sources..."
     pkg_update
@@ -163,6 +160,12 @@ setup_unifi() {
     pkg_install unifi
 }
 
+setup_tailscale(){
+    term_message c "Installing tailscale..."
+    pkg_install tailscale
+    tailscale up
+}
+
 
 final_info() {
     term_message gb "\nSetup script has completed.\n"
@@ -170,7 +173,6 @@ final_info() {
     task_start "Unifi Controller Service https://${hostip}:8443" && is_active unifi
     term_message c "\nA reboot is required to ensure all newly installed services start automatically.\n"
     term_message c "\nAllow a few minutes after reboot for the Unifi services to start.\n"
-    check_continue
     term_message cb "\nRebooting Pi...\n"
     sudo reboot
 }
@@ -181,12 +183,12 @@ main() {
     term_colors
     script_info
     check_superuser
-    check_continue
     pkg_update
     pkg_upgrade
     pkg_cleanup
     setup_dependencies
     setup_unifi
+    setup_tailscale
     final_info
 }
 
