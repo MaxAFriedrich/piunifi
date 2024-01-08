@@ -1,21 +1,28 @@
 ## piunifi.sh
+
 A bash script to automate the setup and configuration of a Raspberry Pi for use as a UniFi Controller for Ubiquiti network devices.
 
+This is a modified version of the script with the following changes:
+
+- Install mongodb
+- Install tailscale
+- Remove some of the prompts
+- Enable automatic updates
+
 ## IMPORTANT  
+
 **If you already have a Unifi Controller running on the same network which you intend to replace with this piunifi you should backup the network settings from the existing controller to a file. This file can then be imported into the piunifi controller. Otherwise you will have to reset all your network devices to adopt them under the new piunifi controller.**
 
 ## Usage
-**Method 1:** Clone and run locally. You can edit and modify script to suit using this method.
 
-`git clone https://github.com/piscripts/piunifi.git`
+NOTE: this script expects [raspios_oldstable_lite_arm64-2023-12-06](https://downloads.raspberrypi.com/raspios_oldstable_lite_arm64/images/raspios_oldstable_lite_arm64-2023-12-06/). I have not tested it on any other image.
 
-`sudo bash piunifi/piunifi-setup.sh`
-
-**Method 2 (Quick easy setup):** Just use the curl or wget command lines shown below for a one-step install.
-
-`sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/bradmarkley/piunifi/main/piunifi.sh)"`
-
-`sudo bash -c "$(wget -O- https://raw.githubusercontent.com/bradmarkley/piunifi/main/piunifi.sh)"`
+1. Run `wget https://raw.githubusercontent.com/MaxAFriedrich/piunifi/main/piunifi.sh` to download the script
+2. Read through the script to make sure you understand what it does and are okay with it
+3. Run `chmod +x piunifi.sh` to make it executable
+4. Run `sudo ./piunifi.sh` to run the script
+5. Follow the instruction to set up tailscale when prompted
+6. Wait for the system to reboot and finish initialising
 
 ## Known issues
 
